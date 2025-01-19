@@ -5,13 +5,123 @@
 
 #include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
+#include <numeric>
 #include <iostream>
 #include <thread>
 
+struct Result
+{
+    uint64_t totalWords;
+    uint64_t uniqueWords;
+    uint64_t sequenceOfUniqueWords;
+};
+
+/*
+ * @brief This algorithm does not change the original text. It is only for analysis.
+ */
+bool isDelimiter(char c)
+{
+    return !std::isalpha(static_cast<unsigned char>(c)) && c != '\'';
+}
+
+std::pair<std::string::iterator, std::string::iterator> findNextToken(std::string::iterator current,
+                                                                      const std::string::iterator& end)
+{
+    std::string::iterator tokenBegin = current;
+    std::string::iterator tokenEnd;
+
+    while (current != end && isDelimiter(*current))
+    {
+        ++current;
+    }
+    tokenBegin = current;
+
+    while (current != end && !isDelimiter(*current))
+    {
+        ++current;
+    }
+    tokenEnd = current;
+
+    return {tokenBegin, tokenEnd};
+}
+
+std::string removePunctuation(std::string& token)
+{
+    boost::algorithm::to_lower(token);
+
+    while (!token.empty() && token.front() == '\'')
+    {
+        token.erase(token.begin());
+    }
+
+    while (!token.empty() && token.back() == '\'')
+    {
+        token.pop_back();
+    }
+
+    return token;
+}
+
+Result AnalyzeText(std::string& text)
+{
+    std::unordered_map<std::string, uint32_t> words = {};
+
+    auto current = text.begin();
+    auto end = text.end();
+    uint32_t sequenceOfUniqueWords = 0;
+
+    uint32_t counterOfUniqueWords = 0;
+    while (true)
+    {
+        if (current == end)
+        {
+            break;
+        }
+
+        auto [tokenBegin, tokenEnd] = findNextToken(current, end);
+        std::string rawToken(tokenBegin, tokenEnd);
+        std::string word = removePunctuation(rawToken);
+        if (!word.empty())
+        {
+            if(words.find(word) == words.end())
+            {
+                ++words[word];
+                ++counterOfUniqueWords;
+                current = tokenEnd;
+            }
+            else
+            {
+                sequenceOfUniqueWords = std::max(sequenceOfUniqueWords, counterOfUniqueWords);
+                counterOfUniqueWords = 0;
+            }
+        }
+        else
+        {
+            current = tokenEnd;
+        }
+    }
+
+    //Make result
+    Result result{};
+    result.totalWords = std::accumulate(words.begin(), words.end(), 0, [](int sum, const auto& p)
+    {
+        return sum + p.second;
+    });
+    result.uniqueWords = words.size();
+    result.sequenceOfUniqueWords = sequenceOfUniqueWords;
+
+    return result;
+}
 
 
+// /**
+//  * @brief test analysis with changes to the original test. Simple example
+//  * @param text
+//  * @return count of words
+//  */
 // int AnalyzeText(std::string text)
 // {
+//
 //     std::unordered_map<std::string, int> words = {};
 //
 //     boost::replace_all(text, "--", " ");
@@ -34,7 +144,7 @@
 //
 //     std::stringstream ss(text);
 //     std::string word;
-//     while(ss >> word)
+//     while (ss >> word)
 //     {
 //         words[word]++;
 //     }
@@ -44,14 +154,13 @@
 ///SERVER
 int main()
 {
-    std::string text = "I do,' Alice hastily replied; 'at least--at least I mean what I say--that's the same thing, you know.";
-    std::cout << text << std::endl;
-    //AnalyzeText(text);
-
-
-
-
-
+    std::string text =
+        R"(I do,' Alice hastily replied; 'at least--at least I mean what I say--that's the same thing, you know.)";
+    //std::cout << text << std::endl;
+    auto result = AnalyzeText(text);
+    std::cout   << "Total words: " << result.totalWords
+                << "\nUnique words: " << result.uniqueWords
+                << "\nSequence of unique words: " << result.sequenceOfUniqueWords << std::endl;
 
     // using namespace boost::asio;
     // using namespace boost::asio::ip;
