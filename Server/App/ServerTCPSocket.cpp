@@ -20,7 +20,7 @@ ServerTCPSocket::~ServerTCPSocket()
 Message ServerTCPSocket::GetLastMessage()
 {
     /*
-     * This method blocks the thread when it is called until there is at least one message in the queue
+     * This method blocks the thread when it is called until in the queue there is at least one message
      */
 
     std::unique_lock lock(incoming_mtx);
@@ -35,6 +35,8 @@ Message ServerTCPSocket::GetLastMessage()
 
 void ServerTCPSocket::AddMessageToOutgoingQueue(const Message& message)
 {
+    std::lock_guard lock(outgoing_mtx);
+    outgoingMessages.push(message);
 }
 
 void ServerTCPSocket::serverIOLoop()

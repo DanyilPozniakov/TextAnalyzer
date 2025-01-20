@@ -6,4 +6,7 @@ add_executable(Server main.cpp
         App/Server.h
 )
 
-target_link_libraries(Server PUBLIC Boost::boost)
+target_link_libraries(Server PUBLIC
+        Boost::boost
+        Boost::json
+)

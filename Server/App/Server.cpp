@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include "Server.h"
 
+Result globalResult;
 
 Server::Server()
  : serverTCPSocket(2525)
@@ -17,16 +18,80 @@ Server::Server()
 void Server::Run()
 {
     serverTCPSocket.start();
+    isRunning.store(true);
 
-    auto message = serverTCPSocket.incomingMessages.front();
+    for(auto& thread : threads)
+    {
+        thread = std::thread([this](){ });
+    }
+
+
+    while(isRunning.load())
+    {
+
+        auto message = serverTCPSocket.GetLastMessage();
+        std::string text = message.message;
+
+        splitText(text, partsText, threads.size());
+
+    }
+
 }
 
 void Server::Stop()
 {
+
 }
 
 
+void Server::splitText(const std::string& text, std::queue<std::string>& partsText, int parts)
+{
+    if(text.empty())
+    {
+        return;
+    }
+    std::size_t partSize = text.size() / parts;
 
+    std::size_t start = 0;
+    for(int i = 0; i < parts; ++i)
+    {
+        std::size_t end = start + partSize;
+
+        while(end < text.size() && !std::isspace(static_cast<unsigned char>(text[end])))
+        {
+            ++end;
+        }
+
+        partsText.push(text.substr(start, end - start));
+        start = end;
+
+        if(start >= text.size())
+        {
+            break;
+        }
+    }
+    if (start < text.size()) {
+        partsText.push(text.substr(start));
+    }
+}
+
+void Server::workerThreadLoop()
+{
+    std::string part;
+    {
+        std::unique_lock lock(partsTextMutex);
+        partsTextCV.wait(lock, [this]()
+        {
+            return !partsText.empty();
+        });
+
+        std::string part = std::move(partsText.front());
+        partsText.pop();
+    }
+    AnalyzeText(part);
+
+
+}
 bool Server::isDelimiter(char c)
 {
     return !std::isalpha(static_cast<unsigned char>(c)) && c != '\'';
@@ -69,7 +134,7 @@ std::string Server::removePunctuation(std::string& token)
     return token;
 }
 
-Result Server::AnalyzeText(std::string text)
+void Server::AnalyzeText(std::string text)
 {
     std::unordered_map<std::string, uint32_t> words = {};
     auto current = text.begin();
@@ -113,6 +178,7 @@ Result Server::AnalyzeText(std::string text)
     result.totalWords = totalWords;
     result.uniqueWords = words.size();
     result.sequenceOfUniqueWords = sequenceOfUniqueWords;
-    return result;
+
+    globalResult += result;
 }
 

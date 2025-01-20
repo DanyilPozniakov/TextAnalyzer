@@ -7,10 +7,9 @@
 #include <boost/algorithm/string.hpp>
 #include <numeric>
 #include <iostream>
+#include <queue>
 #include <set>
 #include <thread>
-
-
 
 
 struct Result
@@ -90,11 +89,10 @@ Result AnalyzeText(std::string& text)
         if (!word.empty())
         {
             ++totalWords;
-            if(auto it = words.find(word); it != words.end())
+            if (auto it = words.find(word); it != words.end())
             {
                 startWindow = std::max<std::size_t>(startWindow, it->second + 1);
                 it->second = wordIndex;
-
             }
             else
             {
@@ -105,8 +103,6 @@ Result AnalyzeText(std::string& text)
             sequenceOfUniqueWords = std::max(sequenceOfUniqueWords, wordIndex - startWindow);
         }
         current = tokenEnd;
-
-
     }
     Result result;
     result.totalWords = totalWords;
@@ -116,95 +112,40 @@ Result AnalyzeText(std::string& text)
 }
 
 
-// /**
-//  * @brief test analysis with changes to the original test. Simple example
-//  * @param text
-//  * @return count of words
-//  */
-// int AnalyzeText(std::string text)
-// {
-//
-//     std::unordered_map<std::string, int> words = {};
-//
-//     boost::replace_all(text, "--", " ");
-//
-//
-//     auto pos = std::remove_if(text.begin(), text.end(), [](char c)
-//     {
-//         return !std::isalpha(c) && !std::isspace(c);
-//     });
-//
-//     text.erase(pos, text.end());
-//
-//
-//     std::cout << text << std::endl;
-//
-//     return 0;
-//
-//     std::this_thread::sleep_for(std::chrono::seconds(50000));
-//     boost::algorithm::to_lower(text);
-//
-//     std::stringstream ss(text);
-//     std::string word;
-//     while (ss >> word)
-//     {
-//         words[word]++;
-//     }
-// }
 
+
+void splitText(const std::string& text, std::queue<std::string>& partsText, int parts)
+{
+    if(text.empty())
+    {
+        return;
+    }
+    std::size_t partSize = text.size() / parts;
+
+    std::size_t start = 0;
+    for(int i = 0; i < parts; ++i)
+    {
+        std::size_t end = start + partSize;
+
+        while(end < text.size() && !std::isspace(static_cast<unsigned char>(text[end])))
+        {
+            ++end;
+        }
+
+        partsText.push(text.substr(start, end - start));
+        start = end;
+
+        if(start >= text.size())
+        {
+            break;
+        }
+    }
+    if (start < text.size()) {
+        partsText.push(text.substr(start));
+    }
+}
 
 ///SERVER
-int main()
-{
-    std::string text2 = "i do what i need to do";
+int main() {
 
-    std::string text = R"(I do,' Alice hastily replied; 'at least--at least I mean what I say--that's the same thing, you know.)";
-
-    //std::cout << text << std::endl;
-    auto result = AnalyzeText(text);
-    std::cout << "Total words: " << result.totalWords
-        << "\nUnique words: " << result.uniqueWords
-        << "\nSequence of unique words: " << result.sequenceOfUniqueWords << std::endl;
-
-    // using namespace boost::asio;
-    // using namespace boost::asio::ip;
-    //
-    // std::vector<std::thread> threads;
-    // threads.resize(std::thread::hardware_concurrency() - 2);
-    // for (auto& thread : threads)
-    // {
-    //     thread = std::thread();
-    // }
-    //
-    // io_context io_context;
-    // ip::tcp::acceptor acceptor(io_context, ip::tcp::endpoint(ip::tcp::v4(), 24245));
-    // ip::tcp::socket socket(io_context);
-    //
-    // while (true)
-    // {
-    //     acceptor.accept(socket); //Blocking thread...
-    //     std::cout << "Client connected!" << std::endl;
-    //
-    //     constexpr std::size_t bufferSize = 1024 * 16;
-    //     char data[bufferSize] = {};
-    //     try
-    //     {
-    //         while (true)
-    //         {
-    //             auto len = socket.receive(buffer(data));
-    //             data[len] = '\0';
-    //             std::cout << data << std::endl;
-    //             // process(data);
-    //         }
-    //     }
-    //     catch (boost::system::system_error& e)
-    //     {
-    //         if (true)
-    //         {
-    //             std::cerr << "Client was disconnected: " << e.what() << std::endl;
-    //             continue;
-    //         }
-    //     }
-    // }
-    return 0;
 }

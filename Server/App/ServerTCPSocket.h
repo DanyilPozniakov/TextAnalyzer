@@ -19,8 +19,7 @@ struct Message
 class ServerTCPSocket
 {
 public:
-    std::queue<Message> incomingMessages;
-    std::queue<Message> outgoingMessages;
+
 
     std::condition_variable messageReceived_cv;
     std::condition_variable outgoingMessage_cv;
@@ -44,6 +43,8 @@ private:
     void receive(const std::shared_ptr<boost::asio::ip::tcp::socket>& client);
     void send(const Message& message);
 
+    std::queue<Message> incomingMessages;
+    std::queue<Message> outgoingMessages;
 
     std::atomic<bool> isRunning = false;
     std::thread ioThread;
