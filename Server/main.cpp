@@ -7,7 +7,11 @@
 #include <boost/algorithm/string.hpp>
 #include <numeric>
 #include <iostream>
+#include <set>
 #include <thread>
+
+
+
 
 struct Result
 {
@@ -18,6 +22,7 @@ struct Result
 
 /*
  * @brief This algorithm does not change the original text. It is only for analysis.
+ * use the
  */
 bool isDelimiter(char c)
 {
@@ -45,6 +50,7 @@ std::pair<std::string::iterator, std::string::iterator> findNextToken(std::strin
     return {tokenBegin, tokenEnd};
 }
 
+
 std::string removePunctuation(std::string& token)
 {
     boost::algorithm::to_lower(token);
@@ -65,51 +71,47 @@ std::string removePunctuation(std::string& token)
 Result AnalyzeText(std::string& text)
 {
     std::unordered_map<std::string, uint32_t> words = {};
-
     auto current = text.begin();
     auto end = text.end();
-    uint32_t sequenceOfUniqueWords = 0;
 
-    uint32_t counterOfUniqueWords = 0;
-    while (true)
+    std::size_t totalWords = 0;
+    std::size_t sequenceOfUniqueWords = 0;
+
+    std::size_t startWindow = 0;
+    std::size_t endWindow = 0;
+
+    std::size_t wordIndex = 0;
+    while (current != end)
     {
-        if (current == end)
-        {
-            break;
-        }
-
         auto [tokenBegin, tokenEnd] = findNextToken(current, end);
         std::string rawToken(tokenBegin, tokenEnd);
         std::string word = removePunctuation(rawToken);
+
         if (!word.empty())
         {
-            if(words.find(word) == words.end())
+            ++totalWords;
+            if(auto it = words.find(word); it != words.end())
             {
-                ++words[word];
-                ++counterOfUniqueWords;
-                current = tokenEnd;
+                startWindow = std::max<std::size_t>(startWindow, it->second + 1);
+                it->second = wordIndex;
+
             }
             else
             {
-                sequenceOfUniqueWords = std::max(sequenceOfUniqueWords, counterOfUniqueWords);
-                counterOfUniqueWords = 0;
+                words[word] = wordIndex;
             }
-        }
-        else
-        {
-            current = tokenEnd;
-        }
-    }
+            ++wordIndex;
 
-    //Make result
-    Result result{};
-    result.totalWords = std::accumulate(words.begin(), words.end(), 0, [](int sum, const auto& p)
-    {
-        return sum + p.second;
-    });
+            sequenceOfUniqueWords = std::max(sequenceOfUniqueWords, wordIndex - startWindow);
+        }
+        current = tokenEnd;
+
+
+    }
+    Result result;
+    result.totalWords = totalWords;
     result.uniqueWords = words.size();
     result.sequenceOfUniqueWords = sequenceOfUniqueWords;
-
     return result;
 }
 
@@ -154,13 +156,15 @@ Result AnalyzeText(std::string& text)
 ///SERVER
 int main()
 {
-    std::string text =
-        R"(I do,' Alice hastily replied; 'at least--at least I mean what I say--that's the same thing, you know.)";
+    std::string text2 = "i do what i need to do";
+
+    std::string text = R"(I do,' Alice hastily replied; 'at least--at least I mean what I say--that's the same thing, you know.)";
+
     //std::cout << text << std::endl;
     auto result = AnalyzeText(text);
-    std::cout   << "Total words: " << result.totalWords
-                << "\nUnique words: " << result.uniqueWords
-                << "\nSequence of unique words: " << result.sequenceOfUniqueWords << std::endl;
+    std::cout << "Total words: " << result.totalWords
+        << "\nUnique words: " << result.uniqueWords
+        << "\nSequence of unique words: " << result.sequenceOfUniqueWords << std::endl;
 
     // using namespace boost::asio;
     // using namespace boost::asio::ip;
