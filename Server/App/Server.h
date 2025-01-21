@@ -58,8 +58,8 @@ private:
     ServerTCPSocket serverTCPSocket;
 
     //Text analysis methods
-    bool isDelimiter(char c);
-    Token findNextToken(std::string::iterator current,const std::string::iterator& end);
+    inline bool isDelimiter(char c);
+    inline Token findNextToken(std::string::iterator current,const std::string::iterator& end);
     std::string removePunctuation(std::string& token);
     Result analyzeText(std::string text);
 

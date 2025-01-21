@@ -81,7 +81,9 @@ Token Server::findNextToken(std::string::iterator current, const std::string::it
 
 std::string Server::removePunctuation(std::string& token)
 {
-    boost::algorithm::to_lower(token);
+    //boost::algorithm::to_lower(token);
+    std::transform(token.begin(), token.end(), token.begin(),
+        [](unsigned char c){ return std::tolower(c); });
 
     while (!token.empty() && token.front() == '\'')
     {
@@ -99,6 +101,7 @@ std::string Server::removePunctuation(std::string& token)
 Result Server::analyzeText(std::string text)
 {
     std::unordered_map<std::string, uint64_t> words = {};
+    words.reserve(1000);
     auto current = text.begin();
     auto end = text.end();
 
@@ -106,7 +109,6 @@ Result Server::analyzeText(std::string text)
     std::size_t sequenceOfUniqueWords = 0;
 
     std::size_t startWindow = 0;
-    std::size_t endWindow = 0;
 
     std::size_t wordIndex = 0;
     while (current != end)
@@ -134,12 +136,8 @@ Result Server::analyzeText(std::string text)
         }
         current = tokenEnd;
     }
-    Result result;
-    result.totalWords = totalWords;
-    result.uniqueWords = words.size();
-    result.sequenceOfUniqueWords = sequenceOfUniqueWords;
 
-    return result;
+    return Result({totalWords, words.size(), sequenceOfUniqueWords});
 }
 
 std::string Server::getCurrentTime()
