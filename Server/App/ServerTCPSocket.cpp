@@ -69,27 +69,36 @@ void ServerTCPSocket::receive(const std::shared_ptr<boost::asio::ip::tcp::socket
     {
         if(!client->is_open())
         {
-            std::cerr << "Client is not connected! in receive method" << std::endl;
+            //If client is not connected, wait for new connection
+            std::cerr << "Client is not connected! Waiting for new connection..." << std::endl;
+            accept();
             return;
         }
-        char buffer[1024*100] = {0};
+
+        std::size_t bufferSize = 1024*1024*2; //2MB buffer
+        std::unique_ptr<char[]> buffer(new char[bufferSize]);
         boost::system::error_code error;
-        std::size_t len = client->read_some(boost::asio::buffer(buffer), error);
+        std::size_t len = client->read_some(boost::asio::buffer(buffer.get(),bufferSize), error);
         if(error)
         {
             if(error == boost::asio::error::eof)
             {
                 std::cout << "Client disconnected!" << std::endl;
+                client->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                client->close();
+                return;
             }
             else
             {
                 std::cerr << "Error while receiving message: " << error.message() << std::endl;
+                client->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                client->close();
                 return;
             }
         }
 
         {
-            std::string message(buffer, len);
+            std::string message(buffer.get(), len);
             std::lock_guard<std::mutex> lock(incomingMessagesMutex);
             incomingMessages.push({client, message});
             incomingMessagesCV.notify_one();
@@ -98,7 +107,6 @@ void ServerTCPSocket::receive(const std::shared_ptr<boost::asio::ip::tcp::socket
     catch (boost::system::system_error& e)
     {
         std::cerr << "Error while receiving message: " << e.what() << std::endl;
-
     }
 }
 
@@ -108,17 +116,19 @@ void ServerTCPSocket::Send(const Message& message)
     {
         boost::system::error_code error;
         boost::asio::write(*client, boost::asio::buffer(message.message), error);
-        if(error)
+        if(error == boost::asio::error::eof)
+        {
+            std::cout << "Client disconnected!" << std::endl;
+            client->close();
+        }
+        else if(error)
         {
             std::cerr << "Error while sending message: " << error.message() << std::endl;
+            client->close();
         }
         else
         {
             std::cout << "Message sent!" << std::endl;
         }
-    }
-    else
-    {
-        std::cout << "Client disconnected!" << std::endl;
     }
 }

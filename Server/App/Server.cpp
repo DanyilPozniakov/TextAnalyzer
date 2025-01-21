@@ -5,6 +5,7 @@
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include "Server.h"
+#include <chrono>
 
 
 Server::Server()
@@ -24,13 +25,19 @@ void Server::Run()
         try
         {
             auto message = serverTCPSocket.GetLastMessage();
+            std::cout << getCurrentTime() << " Server received a new request!\n";
+
+            auto start = std::chrono::high_resolution_clock::now();
             std::string text = message.message;
+            std::string response = analyzeText(text).toJson();
 
-            std::string response = AnalyzeText(text).toJson();
             Message responseMessage;
-
             responseMessage.socket = message.socket;
             responseMessage.message = response;
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+            std::cout << getCurrentTime() << " Server processed the request in " << duration.count() << " ms\n";
             serverTCPSocket.Send(responseMessage);
         }
         catch (std::exception& e)
@@ -89,7 +96,7 @@ std::string Server::removePunctuation(std::string& token)
     return token;
 }
 
-Result Server::AnalyzeText(std::string text)
+Result Server::analyzeText(std::string text)
 {
     std::unordered_map<std::string, uint64_t> words = {};
     auto current = text.begin();
@@ -126,8 +133,6 @@ Result Server::AnalyzeText(std::string text)
             sequenceOfUniqueWords = std::max(sequenceOfUniqueWords, wordIndex - startWindow);
         }
         current = tokenEnd;
-
-
     }
     Result result;
     result.totalWords = totalWords;
@@ -136,4 +141,23 @@ Result Server::AnalyzeText(std::string text)
 
     return result;
 }
+
+std::string Server::getCurrentTime()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm buf;
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    localtime_s(&buf, &in_time_t); // Windows
+#else
+    localtime_r(&in_time_t, &buf); // Unix macos
+#endif
+
+    std::ostringstream oss;
+    oss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
+
 

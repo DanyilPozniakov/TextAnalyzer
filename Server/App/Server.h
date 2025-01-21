@@ -58,11 +58,12 @@ private:
     ServerTCPSocket serverTCPSocket;
 
     //Text analysis methods
-    void splitText(const std::string& text, std::queue<std::string>& partsText, int parts);
     bool isDelimiter(char c);
     Token findNextToken(std::string::iterator current,const std::string::iterator& end);
     std::string removePunctuation(std::string& token);
-    Result AnalyzeText(std::string text);
+    Result analyzeText(std::string text);
+
+    std::string getCurrentTime();
 
 };
 

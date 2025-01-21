@@ -101,10 +101,14 @@ void MainWindow::DisconnectFromServer()
         return;
     }
     socket.disconnectFromHost();
-    if (!socket.waitForDisconnected(2000))
+    if(socket.state() == QAbstractSocket::UnconnectedState)
     {
-        qWarning() << "Disconnection failed!";
-        ui->textBrowser->append("Disconnection failed!");
+        if (!socket.waitForDisconnected(2000))
+        {
+            qWarning() << "Disconnection failed!";
+            ui->textBrowser->append("Disconnection failed!");
+            return;
+        }
     }
     qDebug() << "Disconnected!";
 }
