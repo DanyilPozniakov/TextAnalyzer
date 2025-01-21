@@ -2,16 +2,14 @@
 // Created by pozni on 1/20/2025.
 //
 
-
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 #include "Server.h"
 
-Result globalResult;
 
 Server::Server()
  : serverTCPSocket(2525)
 {
-    threads.reserve(std::thread::hardware_concurrency() - 2);
 
 }
 
@@ -20,78 +18,35 @@ void Server::Run()
     serverTCPSocket.start();
     isRunning.store(true);
 
-    for(auto& thread : threads)
-    {
-        thread = std::thread([this](){ });
-    }
-
 
     while(isRunning.load())
     {
+        try
+        {
+            auto message = serverTCPSocket.GetLastMessage();
+            std::string text = message.message;
 
-        auto message = serverTCPSocket.GetLastMessage();
-        std::string text = message.message;
+            std::string response = AnalyzeText(text).toJson();
+            Message responseMessage;
 
-        splitText(text, partsText, threads.size());
+            responseMessage.socket = message.socket;
+            responseMessage.message = response;
+            serverTCPSocket.AddMessageToOutgoingQueue(responseMessage);
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << "Error: " << e.what() << std::endl;
 
+        }
     }
-
 }
 
 void Server::Stop()
 {
-
+    isRunning.store(false);
+    serverTCPSocket.stop();
 }
 
-
-void Server::splitText(const std::string& text, std::queue<std::string>& partsText, int parts)
-{
-    if(text.empty())
-    {
-        return;
-    }
-    std::size_t partSize = text.size() / parts;
-
-    std::size_t start = 0;
-    for(int i = 0; i < parts; ++i)
-    {
-        std::size_t end = start + partSize;
-
-        while(end < text.size() && !std::isspace(static_cast<unsigned char>(text[end])))
-        {
-            ++end;
-        }
-
-        partsText.push(text.substr(start, end - start));
-        start = end;
-
-        if(start >= text.size())
-        {
-            break;
-        }
-    }
-    if (start < text.size()) {
-        partsText.push(text.substr(start));
-    }
-}
-
-void Server::workerThreadLoop()
-{
-    std::string part;
-    {
-        std::unique_lock lock(partsTextMutex);
-        partsTextCV.wait(lock, [this]()
-        {
-            return !partsText.empty();
-        });
-
-        std::string part = std::move(partsText.front());
-        partsText.pop();
-    }
-    AnalyzeText(part);
-
-
-}
 bool Server::isDelimiter(char c)
 {
     return !std::isalpha(static_cast<unsigned char>(c)) && c != '\'';
@@ -134,7 +89,7 @@ std::string Server::removePunctuation(std::string& token)
     return token;
 }
 
-void Server::AnalyzeText(std::string text)
+Result Server::AnalyzeText(std::string text)
 {
     std::unordered_map<std::string, uint32_t> words = {};
     auto current = text.begin();
@@ -179,6 +134,6 @@ void Server::AnalyzeText(std::string text)
     result.uniqueWords = words.size();
     result.sequenceOfUniqueWords = sequenceOfUniqueWords;
 
-    globalResult += result;
+    return result;
 }
 

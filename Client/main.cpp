@@ -125,13 +125,8 @@ int main()
     }
 
 
-    return 0;
 
 
-    std::cout << "Connected to the server!" << std::endl;
-
- //   std::string message = "Hello from the client!";
-//    boost::asio::write(socket, boost::asio::buffer(message));
 
     return 0;
 }

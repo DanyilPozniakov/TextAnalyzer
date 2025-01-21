@@ -13,9 +13,9 @@ typedef std::pair<std::string::iterator, std::string::iterator> Token;
 
 struct Result
 {
-    std::atomic<uint64_t> totalWords;
-    std::atomic<uint64_t> uniqueWords;
-    std::atomic<uint64_t> sequenceOfUniqueWords;
+    uint64_t totalWords;
+    uint64_t uniqueWords;
+    uint64_t sequenceOfUniqueWords;
 
     [[nodiscard]]std::string toJson() const
     {
@@ -28,10 +28,17 @@ struct Result
 
     Result& operator+=(const Result& other)
     {
-        totalWords.fetch_add(other.totalWords.load());
-        uniqueWords.fetch_add(other.uniqueWords.load());
-        sequenceOfUniqueWords.fetch_add(other.sequenceOfUniqueWords.load());
+        totalWords += other.totalWords;
+        uniqueWords += other.uniqueWords;
+        sequenceOfUniqueWords += other.sequenceOfUniqueWords;
         return *this;
+    }
+
+    void reset()
+    {
+        totalWords = 0;
+        uniqueWords = 0;
+        sequenceOfUniqueWords = 0;
     }
 };
 
@@ -44,31 +51,18 @@ public:
     void Stop();
 
 
-
-
-
-
-
-
 private:
     std::queue<std::string> partsText;
-
-    std::mutex partsTextMutex;
-    std::condition_variable partsTextCV;
+    std::atomic<bool> isRunning = false;
 
     ServerTCPSocket serverTCPSocket;
-    std::vector<std::thread> threads;
-    std::atomic<bool> isRunning = false;
 
     //Text analysis methods
     void splitText(const std::string& text, std::queue<std::string>& partsText, int parts);
-    void workerThreadLoop();
-
-
     bool isDelimiter(char c);
     Token findNextToken(std::string::iterator current,const std::string::iterator& end);
     std::string removePunctuation(std::string& token);
-    void AnalyzeText(std::string text);
+    Result AnalyzeText(std::string text);
 
 };
 

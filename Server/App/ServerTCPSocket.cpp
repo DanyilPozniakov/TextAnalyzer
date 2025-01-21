@@ -37,6 +37,10 @@ void ServerTCPSocket::AddMessageToOutgoingQueue(const Message& message)
 {
     std::lock_guard lock(outgoing_mtx);
     outgoingMessages.push(message);
+    if(outgoingMessages.size() > 0)
+    {
+        send(message);
+    }
 }
 
 void ServerTCPSocket::serverIOLoop()
@@ -44,23 +48,7 @@ void ServerTCPSocket::serverIOLoop()
     try
     {
         accept(); //blocking thread...
-
-        while (isRunning.load())
-        {
-            // INPUT/OUTPUT LOOP
-
-            if (client && client->is_open())
-            {
-                receive(client);
-            }
-
-            while (!outgoingMessages.empty())
-            {
-                send(outgoingMessages.front());
-                std::lock_guard lock(outgoing_mtx);
-                outgoingMessages.pop();
-            }
-        }
+        io_context.run();
     }
     catch (boost::system::system_error& e)
     {
@@ -77,16 +65,20 @@ void ServerTCPSocket::start()
 void ServerTCPSocket::stop()
 {
     isRunning.store(false);
-    if(ioThread.joinable())
+    if (ioThread.joinable())
     {
         ioThread.join();
     }
+
+    io_context.stop();
+
 }
 
 void ServerTCPSocket::accept()
 {
     client = std::make_shared<boost::asio::ip::tcp::socket>(io_context);
     acceptor.accept(*client);
+    receive(client);
     std::cout << "Client connected!" << std::endl;
 }
 
@@ -94,26 +86,18 @@ void ServerTCPSocket::receive(const std::shared_ptr<boost::asio::ip::tcp::socket
 {
     try
     {
-        char buffer[1024 * 16];
+        auto buffer = std::make_shared<std::vector<char>>(1024 * 16);
         boost::system::error_code error;
-        std::size_t len = client->read_some(boost::asio::buffer(buffer), error);
-        if (error == boost::asio::error::eof)
+        client->async_read_some(boost::asio::buffer(*buffer), [this, client,buffer](boost::system::error_code error, std::size_t len)
         {
-            client->close();
-            this->client.reset();
-            std::cout << "Connection closed" << std::endl;
-        }
-        if (error)
-        {
-            throw boost::system::system_error(error);
-        }
-
-        {
-            //Push the message to the incoming queue
-            std::lock_guard lock(incoming_mtx);
-            incomingMessages.push({client, std::string(buffer, len)});
-            messageReceived_cv.notify_all();
-        }
+            if (!error)
+            {
+                std::lock_guard lock(incoming_mtx);
+                incomingMessages.push(Message{client, std::string(buffer->data(), len)});
+            }
+            messageReceived_cv.notify_one();
+            receive(client);
+        });
     }
     catch (boost::system::system_error& e)
     {
@@ -127,15 +111,30 @@ void ServerTCPSocket::send(const Message& message)
 {
     if (auto client = message.socket.lock())
     {
-        boost::system::error_code error;
-        boost::asio::write(*client, boost::asio::buffer(message.message), error);
-        if (error)
+        boost::asio::async_write(*client,boost::asio::buffer(message.message),
+        [message](boost::system::error_code error, std::size_t len)
         {
-            std::cerr << "Send failed: " << error.message() << std::endl;
+            if (error)
+            {
+                std::cerr << "Error sending message: " << error.message() << std::endl;
+            }
+            else
+            {
+                std::cout << "Message sent!" << std::endl;
+            }
+        });
+
+        outgoingMessages.pop();
+
+        if(!outgoingMessages.empty())
+        {
+            send(outgoingMessages.front());
         }
     }
     else
     {
-        std::cerr << "Client is disconnected" << std::endl;
+        std::cout << "Client disconnected!" << std::endl;
+        std::lock_guard lock(outgoing_mtx);
+        outgoingMessages.pop();
     }
 }
