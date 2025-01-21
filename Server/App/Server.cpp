@@ -81,7 +81,6 @@ Token Server::findNextToken(std::string::iterator current, const std::string::it
 
 std::string Server::removePunctuation(std::string& token)
 {
-    //boost::algorithm::to_lower(token);
     std::transform(token.begin(), token.end(), token.begin(),
         [](unsigned char c){ return std::tolower(c); });
 
@@ -100,6 +99,7 @@ std::string Server::removePunctuation(std::string& token)
 
 Result Server::analyzeText(std::string text)
 {
+    //the window technique
     std::unordered_map<std::string, uint64_t> words = {};
     words.reserve(1000);
     auto current = text.begin();
@@ -123,7 +123,7 @@ Result Server::analyzeText(std::string text)
             if(auto it = words.find(word); it != words.end())
             {
                 startWindow = std::max<std::size_t>(startWindow, it->second + 1);
-                it->second = wordIndex;
+                it->second = wordIndex; //update the word index when it was last seen
 
             }
             else
@@ -136,7 +136,6 @@ Result Server::analyzeText(std::string text)
         }
         current = tokenEnd;
     }
-
     return Result({totalWords, words.size(), sequenceOfUniqueWords});
 }
 

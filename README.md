@@ -1,92 +1,20 @@
 # Text Parser
 
-# User documentation
+## Description
+This project is a text parser application that analyzes text files to count the total number of words, unique words, and the longest sequence of unique words. It consists of a server and a client application.
 
-## Client side
-Client side is external executable file with directional communicating.
-Working with this part of the program going through some commands.
-You can write some commands to the client session.
-If a command wasn't recognized - you will get an error.
+## Features
+- **Server**: Receives text data from the client, processes it, and returns the analysis results.
+- **Client**: Connects to the server, sends text data, and displays the analysis results.
 
-### Commands
-There is will be described all possible commands.
+## Technologies Used
+- **C++**: Core programming language.
+- **Boost.Asio**: For networking in the server.
+- **Qt**: For the client GUI.
 
+## Setup and Installation
 
-#### connect
-This command will connect a client to the specified server.
-```bash
-connect <ip>:<port> 
-```
-
-Example:
-```bash
-connect 127.0.0.1:8888
-```
-
-**Success**: Client was connected to the server: \<ip\>:\<port\>
-
-**Error**: Error: <error_message>
-
-#### disconnect
-This command will disconnect you from the connected server. If connection wasn't estabilished - nothing happen.
-```bash
-disconnect
-```
-
-**Success**: Client was disconnected from the server: \<ip\>:\<port\>
-
-**Error**: No connection
-
-
-#### status
-Will show you connection status and server will be pinged.
-```bash
-status
-```
-
-**Output**: 
-Connection: \<ip\>:\<port\>
-Connection status: active|not active
-
-
-#### setText
-Send inputed text to the connected server.
-Warning: you must estabilish a connection to the server.
-```bash
-setText <your_text>
-```
-Possible result to the console:
-
-**Success**: text was sent to the server. text metrics...!!!!!!
-
-**Error**: Error: <error_message>
-
-
-#### setFileText
-Set file path to read it and send to the connected server.
-Warning: you must estabilish a connection to the server.
-```bash
-setFileText <path_to_file>
-```
-Possible result to the console:
-
-**Success**: file was sent to the server. text metrics...!!!!!!
-
-**Error**: Error: <error_message>
-
-
-#### help
-Will show all commands with a description
-```bash
-help
-```
-
-
-#### exit
-Just exit from the clinet. The active console will be closed all, process will be interrupted.
-
-# Techinal documentation:
-
-## Client side
-
-## Server side
+### Prerequisites
+- C++ compiler
+- Boost library
+- Qt framework
