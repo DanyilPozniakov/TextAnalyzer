@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QException>
 
 #include "mainwindow.h"
 #include "ui_MainWindow.h"
@@ -19,25 +20,19 @@ MainWindow::MainWindow(QWidget* parent) :
     ui->setupUi(this);
 
     ui->BSend->setEnabled(false);
-    ui->lineEdit->setPlaceholderText("Enter your message here or press 'Open file' to select a file...");
 
+    connect(ui->closeConnect, &QPushButton::clicked, this, &MainWindow::DisconnectFromServer);
+    connect(ui->openFileButton, &QPushButton::clicked, this, &MainWindow::OpenFile);
     connect(ui->BConnec, &QPushButton::clicked, this, &MainWindow::ConnectToServer);
     connect(ui->BSend, &QPushButton::clicked, this, &MainWindow::SendMessageToServer);
-    connect(&socket, &QTcpSocket::connected, this, &MainWindow::onConnected);
     connect(&socket, &QTcpSocket::readyRead, this, &MainWindow::onReadyRead);
     connect(&socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
-        this, &MainWindow::onSocketError);
+            this, &MainWindow::onSocketError);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-void MainWindow::onConnected()
-{
-    ui->textBrowser->append("Connected to the server!");
-    ui->BSend->setEnabled(true);
 }
 
 
@@ -48,6 +43,13 @@ void MainWindow::onReadyRead()
 
     //PARSE JSON
     QJsonDocument doc = QJsonDocument::fromJson(data);
+    if(!doc.isObject())
+    {
+        qWarning() << "Invalid JSON";
+        ui->textBrowser->append("Incoming data is not a JSON object!");
+        return;
+    }
+
     QJsonObject obj = doc.object();
     QString totalWords = QString::number(obj["totalWords"].toInt());
     QString uniqueWords = QString::number(obj["uniqueWords"].toInt());
@@ -62,12 +64,21 @@ void MainWindow::onReadyRead()
 
 void MainWindow::onSocketError(QAbstractSocket::SocketError socketError)
 {
+    qWarning() << "Socket error: " << socketError;
+    ui->textBrowser->append("Socket error: " + QString::number(socketError));
 }
 
 void MainWindow::ConnectToServer()
 {
     QString ip = "127.0.0.1";
     quint16 port = 2525;
+
+    if(socket.state() == QAbstractSocket::ConnectedState)
+    {
+        qWarning() << "Already connected!";
+        ui->textBrowser->append("Already connected!");
+        return;
+    }
 
     socket.connectToHost(ip, port);
     if (!socket.waitForConnected(3000))
@@ -76,26 +87,37 @@ void MainWindow::ConnectToServer()
         ui->textBrowser->append("Connection failed!");
     }
     qDebug() << "Connected!";
+
+    ui->textBrowser->append("Connected to the server!");
+    ui->BSend->setEnabled(true);
 }
 
 void MainWindow::DisconnectFromServer()
 {
+    if(socket.state() == QAbstractSocket::UnconnectedState)
+    {
+        qWarning() << "Already disconnected!";
+        ui->textBrowser->append("Already disconnected!");
+        return;
+    }
+    socket.disconnectFromHost();
+    if (!socket.waitForDisconnected(2000))
+    {
+        qWarning() << "Disconnection failed!";
+        ui->textBrowser->append("Disconnection failed!");
+    }
+    qDebug() << "Disconnected!";
 }
 
 void MainWindow::SendMessageToServer()
 {
-    QString message = ui->lineEdit->text();
-    if (message.isEmpty())
+    if (fileText.isEmpty())
     {
-        QByteArray data = fileText.toUtf8();
-        socket.write(data);
+        qWarning() << "File is empty!";
+        ui->textBrowser->append("File is empty!");
+        return;
     }
-    else
-    {
-        QByteArray data = message.toUtf8();
-        socket.write(data);
-    }
-
+    socket.write(fileText.toUtf8());
     if (!socket.waitForBytesWritten(2000))
     {
         qWarning() << "Message not sent!";
@@ -106,14 +128,17 @@ void MainWindow::SendMessageToServer()
 
 void MainWindow::OpenFile()
 {
-    QString filePath = QFileDialog::getOpenFileName(this, "Open file", QDir::homePath());
+    QString filePath = QFileDialog::getOpenFileName(this, "Open file",
+                                                    QDir::homePath(), "All Files (*.*)"
+    );
     if (!filePath.isEmpty())
     {
         QFile file(filePath);
         if (file.open(QIODevice::ReadOnly))
         {
-            QTextStream stream(&file);
-            fileText = stream.readAll();
+            QTextStream in(&file);
+            fileText = in.readAll();
+            ui->textBrowser->append("File uploaded!");
             file.close();
         }
     }

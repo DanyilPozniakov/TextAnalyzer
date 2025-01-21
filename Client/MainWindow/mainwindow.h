@@ -10,19 +10,23 @@
 
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+
+namespace Ui
+{
+class MainWindow;
+}
+
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow {
-Q_OBJECT
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
-
 private slots:
-    void onConnected();
     void onReadyRead();
     void onSocketError(QAbstractSocket::SocketError socketError);
 
@@ -31,18 +35,11 @@ private slots:
     void SendMessageToServer();
     void OpenFile();
 
-
 private:
-    Ui::MainWindow *ui;
+    Ui::MainWindow* ui;
     QString fileText;
 
     QTcpSocket socket;
-
-
-
-
-
-
 };
 
 

@@ -15,8 +15,8 @@ Server::Server()
 
 void Server::Run()
 {
-    serverTCPSocket.start();
     isRunning.store(true);
+    serverTCPSocket.start();
 
 
     while(isRunning.load())
@@ -31,7 +31,7 @@ void Server::Run()
 
             responseMessage.socket = message.socket;
             responseMessage.message = response;
-            serverTCPSocket.AddMessageToOutgoingQueue(responseMessage);
+            serverTCPSocket.Send(responseMessage);
         }
         catch (std::exception& e)
         {
