@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->setWindowTitle("Text Analyzer");
 
     ui->BSend->setEnabled(false);
 
@@ -39,7 +40,6 @@ MainWindow::~MainWindow()
 void MainWindow::onReadyRead()
 {
     QByteArray data = socket.readAll();
-    int digitToString = 100;
 
     //PARSE JSON
     QJsonDocument doc = QJsonDocument::fromJson(data);
@@ -101,7 +101,7 @@ void MainWindow::DisconnectFromServer()
         return;
     }
     socket.disconnectFromHost();
-    if(socket.state() == QAbstractSocket::UnconnectedState)
+    if(!socket.state() == QAbstractSocket::UnconnectedState)
     {
         if (!socket.waitForDisconnected(2000))
         {

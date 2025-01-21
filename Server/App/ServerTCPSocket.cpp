@@ -30,7 +30,7 @@ Message ServerTCPSocket::GetLastMessage()
 void ServerTCPSocket::start()
 {
     isRunning.store(true);
-
+    std::cout << "Server started!" << std::endl;
     accept();
 
     receiveThread = std::thread([this]()
