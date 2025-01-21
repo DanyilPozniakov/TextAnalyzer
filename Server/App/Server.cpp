@@ -91,7 +91,7 @@ std::string Server::removePunctuation(std::string& token)
 
 Result Server::AnalyzeText(std::string text)
 {
-    std::unordered_map<std::string, uint32_t> words = {};
+    std::unordered_map<std::string, uint64_t> words = {};
     auto current = text.begin();
     auto end = text.end();
 

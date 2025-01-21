@@ -6,6 +6,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QTcpSocket>
 
 
 QT_BEGIN_NAMESPACE
@@ -19,8 +20,29 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+
+private slots:
+    void onConnected();
+    void onReadyRead();
+    void onSocketError(QAbstractSocket::SocketError socketError);
+
+    void ConnectToServer();
+    void DisconnectFromServer();
+    void SendMessageToServer();
+    void OpenFile();
+
+
 private:
     Ui::MainWindow *ui;
+    QString fileText;
+
+    QTcpSocket socket;
+
+
+
+
+
+
 };
 
 

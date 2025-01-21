@@ -37,7 +37,7 @@ void ServerTCPSocket::AddMessageToOutgoingQueue(const Message& message)
 {
     std::lock_guard lock(outgoing_mtx);
     outgoingMessages.push(message);
-    if(outgoingMessages.size() > 0)
+    if(outgoingMessages.size() == 1)
     {
         send(message);
     }
@@ -109,6 +109,12 @@ void ServerTCPSocket::receive(const std::shared_ptr<boost::asio::ip::tcp::socket
 
 void ServerTCPSocket::send(const Message& message)
 {
+
+    if(outgoingMessages.empty())
+    {
+        return;
+    }
+
     if (auto client = message.socket.lock())
     {
         boost::asio::async_write(*client,boost::asio::buffer(message.message),
@@ -134,7 +140,6 @@ void ServerTCPSocket::send(const Message& message)
     else
     {
         std::cout << "Client disconnected!" << std::endl;
-        std::lock_guard lock(outgoing_mtx);
         outgoingMessages.pop();
     }
 }
