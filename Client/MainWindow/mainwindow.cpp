@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget* parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+    socket.close();
 }
 
 
@@ -147,3 +148,4 @@ void MainWindow::OpenFile()
         }
     }
 }
+
